@@ -1,0 +1,6 @@
+id=multiuserenabler
+name=Android 多用戶多開啟用模組
+version=v1.0
+versionCode=1
+author=lokey0905
+description=設定裝置的最大用戶數量與自動啟動其他使用者
