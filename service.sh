@@ -62,6 +62,15 @@ for user_id in $USER_IDS; do
   RC=$?
   log_msg "settings --user $user_id put global device_provisioned 1 => rc=$RC, out=$OUT"
 
+  # Enable Gboard for the user so that password entry works on the lock screen. MIUI's default input method doesn't work until after the user logs in and opens an app that requires text input, which is a catch-22 for the lock screen.
+  OUT="$(ime enable --user "$user_id" com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME 2>&1)"
+  RC=$?
+  log_msg "ime enable --user $user_id com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME => rc=$RC, out=$OUT"
+
+  OUT="$(settings --user "$user_id" put secure default_input_method com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME 2>&1)"
+  RC=$?
+  log_msg "settings --user $user_id put secure default_input_method com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME => rc=$RC, out=$OUT"
+
   # Small delay before starting the user to reduce contention during boot.
   sleep 1
   OUT="$(am start-user "$user_id" 2>&1)"
