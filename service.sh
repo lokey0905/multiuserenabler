@@ -62,9 +62,15 @@ for user_id in $USER_IDS; do
     continue
   fi
 
-  # Skip synthetic/high special users such as XSpace 999.
+  # Xiaomi built-in special user, such as Second Space / XSpace.
+  # Only start it. Do not touch setup flags or package state.
   if [ "$user_id" -ge 999 ]; then
-    log_msg "Skip setup/start for special/high user $user_id"
+    log_msg "Special/high user $user_id detected, only start-user"
+
+    OUT="$(am start-user "$user_id" 2>&1)"
+    RC=$?
+    log_msg "am start-user $user_id => rc=$RC, out=$OUT"
+
     continue
   fi
 
