@@ -1,4 +1,5 @@
 #!/system/bin/sh
+
 MODTAG="MultiUserEnabler"
 LOGFILE="/data/local/tmp/multiuserenabler.log"
 OTA_PKG="com.android.updater"
@@ -10,7 +11,7 @@ log_msg() {
 
 # Wait until Android reports boot completed
 BOOT_WAIT=0
-while [ "$(getprop sys.boot_completed)" != "1" ] && [ $BOOT_WAIT -lt 120 ]; do
+while [ "$(getprop sys.boot_completed)" != "1" ] && [ "$BOOT_WAIT" -lt 120 ]; do
   sleep 2
   BOOT_WAIT=$((BOOT_WAIT + 2))
 done
@@ -38,9 +39,11 @@ fi
 # Xiaomi: disable OTA updater for all normal users
 if [ "$MANUFACTURER" = "Xiaomi" ] || [ "$MANUFACTURER" = "xiaomi" ] || [ "$MANUFACTURER" = "XIAOMI" ]; then
   log_msg "Xiaomi device detected, disabling OTA updater: ${OTA_PKG}"
+
   for user_id in $USER_IDS; do
     # Skip synthetic/high special users such as XSpace 999
     if [ "$user_id" -ge 999 ]; then
+      log_msg "Skip OTA disable for special/high user $user_id"
       continue
     fi
 
@@ -52,8 +55,19 @@ else
   log_msg "Non-Xiaomi device, skip OTA disable"
 fi
 
+# Mark profiles as setup-complete and start secondary users.
 for user_id in $USER_IDS; do
-  # Mark user/profile setup complete so MIUI recents/launcher won't hide its tasks.
+  # Skip owner user.
+  if [ "$user_id" = "0" ]; then
+    continue
+  fi
+
+  # Skip synthetic/high special users such as XSpace 999.
+  if [ "$user_id" -ge 999 ]; then
+    log_msg "Skip setup/start for special/high user $user_id"
+    continue
+  fi
+
   OUT="$(settings --user "$user_id" put secure user_setup_complete 1 2>&1)"
   RC=$?
   log_msg "settings --user $user_id put secure user_setup_complete 1 => rc=$RC, out=$OUT"
@@ -61,15 +75,6 @@ for user_id in $USER_IDS; do
   OUT="$(settings --user "$user_id" put global device_provisioned 1 2>&1)"
   RC=$?
   log_msg "settings --user $user_id put global device_provisioned 1 => rc=$RC, out=$OUT"
-
-  # Enable Gboard for the user so that password entry works on the lock screen. MIUI's default input method doesn't work until after the user logs in and opens an app that requires text input, which is a catch-22 for the lock screen.
-  OUT="$(ime enable --user "$user_id" com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME 2>&1)"
-  RC=$?
-  log_msg "ime enable --user $user_id com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME => rc=$RC, out=$OUT"
-
-  OUT="$(settings --user "$user_id" put secure default_input_method com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME 2>&1)"
-  RC=$?
-  log_msg "settings --user $user_id put secure default_input_method com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME => rc=$RC, out=$OUT"
 
   # Small delay before starting the user to reduce contention during boot.
   sleep 1
